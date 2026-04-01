@@ -1,0 +1,23 @@
+{
+  "name": "academy-fichas",
+  "version": "1.0.0",
+  "description": "Web service Node.js para o projeto Academy-Fichas",
+  "main": "bot.js",
+  "license": "ISC",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@adiwajshing/baileys": "^5.0.0",
+    "@hapi/boom": "^10.0.1",
+    "@whiskeysockets/baileys": "^7.0.0-rc.9",
+    "body-parser": "^2.2.2",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "node-fetch": "^3.3.2",
+    "qrcode-terminal": "^0.12.0"
+  },
+  "scripts": {
+    "start": "node bot.js"
+  }
+}

@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: academy-fichas
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /healthz
+    autoDeploy: true
