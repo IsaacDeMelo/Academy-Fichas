@@ -12,6 +12,10 @@ const {
 const app = express();
 const port = Number(process.env.PORT) || 3000;
 const authFolder = process.env.BAILEYS_AUTH_DIR || path.join(__dirname, ".baileys_auth");
+const groupId = process.env.WHATSAPP_GROUP_ID || "120363359675685823@g.us";
+
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
 let sock;
 let latestQrText = null;
@@ -26,8 +30,7 @@ async function startWhatsApp() {
 
 	sock = makeWASocket({
 		auth: state,
-		version,
-		printQRInTerminal: true
+		version
 	});
 
 	sock.ev.on("creds.update", saveCreds);
@@ -70,6 +73,40 @@ async function startWhatsApp() {
 			}
 		}
 	});
+
+	sock.ev.on("messages.upsert", async ({ messages, type }) => {
+		if (type !== "notify") {
+			return;
+		}
+
+		const msg = messages?.[0];
+		if (!msg?.message) {
+			return;
+		}
+
+		const sender = msg.key.remoteJid;
+		const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
+
+		if (!sender || !text) {
+			return;
+		}
+
+		if (text === "!grupo") {
+			if (sender.endsWith("@g.us")) {
+				await sock.sendMessage(sender, {
+					text: `📍 *ID DESTE GRUPO:*\n\n${sender}\n\nUse este valor em WHATSAPP_GROUP_ID.`
+				});
+			} else {
+				await sock.sendMessage(sender, {
+					text: "Esse comando so funciona em grupo."
+				});
+			}
+		}
+
+		if (text === "!ping") {
+			await sock.sendMessage(sender, { text: "pong!" });
+		}
+	});
 }
 
 app.get("/", (_req, res) => {
@@ -96,6 +133,48 @@ app.get("/session", (_req, res) => {
 		connectedAt,
 		user: currentUser
 	});
+});
+
+app.post("/enviar-ficha", async (req, res) => {
+	if (!sock || !connected) {
+		res.status(503).json({
+			error: "WhatsApp ainda nao conectado",
+			hint: "Abra /qr para escanear e tente novamente"
+		});
+		return;
+	}
+
+	const d = req.body || {};
+	const mensagemFormatada =
+		"📝 *NOVA FICHA DE CRIACAO* 📝\n\n" +
+		"👤 *INFORMACOES DO JOGADOR*\n" +
+		`• *Nome:* ${d.jogador || "Nao informado"}\n` +
+		`• *Idade:* ${d.idade || "Nao informado"}\n` +
+		`• *Telefone:* ${d.telefone || "Nao informado"}\n` +
+		`• *Disponibilidade:* ${d.disponibilidade || "Nao informado"}\n` +
+		`• *Academia:* ${d.academia || "Nao informado"}\n` +
+		`• *Obs:* ${d.observacoes || "Sem observacoes"}\n\n` +
+		"🎭 *INFORMACOES DO PERSONAGEM*\n" +
+		`• *Nome:* ${d.personagem || "Nao informado"}\n` +
+		`• *ID:* ${d.id || "Nao informado"}\n` +
+		`• *Classe:* ${d.classe || "Nao informado"}\n` +
+		`• *Cla:* ${d.cla || "Nao informado"}\n` +
+		`• *Descricao:* ${d.descricao || "Sem descricao"}`;
+
+	try {
+		await sock.sendMessage(groupId, { text: mensagemFormatada });
+		res.status(200).json({
+			ok: true,
+			message: "Ficha enviada com sucesso",
+			groupId
+		});
+	} catch (error) {
+		console.error("Erro ao enviar ficha para o grupo:", error);
+		res.status(500).json({
+			error: "Erro ao enviar para o WhatsApp",
+			hint: "Verifique WHATSAPP_GROUP_ID e permissao do bot no grupo"
+		});
+	}
 });
 
 app.get("/qr", async (_req, res) => {

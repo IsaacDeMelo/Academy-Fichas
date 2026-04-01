@@ -8,6 +8,12 @@ Projeto configurado para subir como Web Service no Render com login de WhatsApp 
 - `GET /healthz`: health check para o Render.
 - `GET /session`: detalhes da sessao atual do WhatsApp.
 - `GET /qr`: pagina HTML com o QR Code para escaneamento.
+- `POST /enviar-ficha`: recebe os dados do formulario e envia a ficha para o grupo.
+
+Campos aceitos no POST:
+
+- `jogador`, `idade`, `telefone`, `disponibilidade`, `academia`, `observacoes`
+- `personagem`, `id`, `classe`, `cla`, `descricao`
 
 ## Como escanear o QR no Render
 
@@ -35,6 +41,37 @@ Configuracao manual (alternativa):
 - Build Command: `npm install`
 - Start Command: `npm start`
 - Health Check Path: `/healthz`
+
+## Variaveis de ambiente
+
+- `WHATSAPP_GROUP_ID`: ID do grupo que vai receber as fichas (ex.: `120...@g.us`).
+- `BAILEYS_AUTH_DIR` (opcional): pasta de sessao do WhatsApp.
+
+Para descobrir o ID de um grupo:
+
+1. Conecte o bot no WhatsApp.
+2. Dentro do grupo, envie `!grupo`.
+3. Copie o ID retornado e configure em `WHATSAPP_GROUP_ID`.
+
+Exemplo de envio para o endpoint:
+
+```bash
+curl -X POST "http://localhost:3000/enviar-ficha" \
+	-H "Content-Type: application/json" \
+	-d '{
+		"jogador":"Isaac",
+		"idade":"22",
+		"telefone":"(11)99999-0000",
+		"disponibilidade":"Noite",
+		"academia":"Konoha",
+		"observacoes":"Teste",
+		"personagem":"Naruto",
+		"id":"123",
+		"classe":"Ninja",
+		"cla":"Uzumaki",
+		"descricao":"Determinado"
+	}'
+```
 
 ## Rodar localmente
 
