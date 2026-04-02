@@ -7,13 +7,17 @@ const port = process.env.PORT || 3000;
 // O alvo para onde as fichas serão enviadas
 const TARGET_BASE_URL = "http://node103.ldc.srv.br:30404";
 
-// Middleware para parse de diferentes tipos de conteúdo
-app.use(express.json({ limit: "5mb" }));
-app.use(express.urlencoded({ extended: true, limit: "5mb" }));
-app.use(express.text({ type: "*/*", limit: "5mb" }));
+// Middleware para capturar o body sem interferir no routing
+app.use(express.raw({ type: "*/*", limit: "5mb" }));
 
 // Rota de saúde
 app.get("/healthz", (req, res) => res.send("OK"));
+
+// Rota de debug - responde com sucesso para qualquer POST em /enviar-ficha-teste
+app.post("/enviar-ficha-teste", (req, res) => {
+    console.log("✓ Ficha recebida:", req.body);
+    res.json({ sucesso: true, mensagem: "Ficha recebida com sucesso!" });
+});
 
 // O segredo está aqui: o '*' captura TUDO
 app.all("*", async (req, res) => {
@@ -31,12 +35,6 @@ app.all("*", async (req, res) => {
         delete headers.host;
         delete headers.connection;
 
-        // Converte o body para string/buffer para repassar
-        let body = req.body;
-        if (typeof body === 'object') {
-            body = JSON.stringify(body);
-        }
-
         const fetchOptions = {
             method: req.method,
             headers: headers,
@@ -44,8 +42,8 @@ app.all("*", async (req, res) => {
         };
 
         // Se houver corpo na requisição (POST/PUT), repassa
-        if (body && body.length > 0) {
-            fetchOptions.body = body;
+        if (req.body && req.body.length > 0) {
+            fetchOptions.body = req.body;
         }
 
         const upstreamResponse = await fetch(targetUrl, fetchOptions);
