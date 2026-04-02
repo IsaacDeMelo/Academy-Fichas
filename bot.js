@@ -12,6 +12,34 @@ app.use(express.raw({ type: "*/*", limit: "5mb" }));
 // Rota de saúde
 app.get("/healthz", (req, res) => res.send("OK"));
 
+// Rota de diagnóstico para verificar conectividade com o destino
+app.get("/debug-upstream", async (req, res) => {
+    const targetPath = req.query.path || "/enviar-ficha-teste";
+    const targetUrl = `${TARGET_BASE_URL}${targetPath}`;
+
+    try {
+        const upstreamResponse = await fetch(targetUrl, {
+            method: "GET",
+            redirect: "follow"
+        });
+        const text = await upstreamResponse.text();
+        res.status(200).json({
+            ok: true,
+            targetUrl,
+            status: upstreamResponse.status,
+            responsePreview: text.slice(0, 200)
+        });
+    } catch (error) {
+        res.status(500).json({
+            ok: false,
+            targetUrl,
+            name: error?.name,
+            message: error?.message,
+            cause: error?.cause ? String(error.cause) : null
+        });
+    }
+});
+
 async function forwardRequest(req, res, targetPath) {
     const targetUrl = `${TARGET_BASE_URL}${targetPath}`;
     console.log(`Forwarding ${req.method} to: ${targetUrl}`);
