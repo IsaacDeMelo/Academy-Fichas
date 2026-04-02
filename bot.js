@@ -10,7 +10,7 @@ const TARGET_BASE_URL = "http://node103.ldc.srv.br:30404";
 // Middleware para parse de diferentes tipos de conteúdo
 app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ extended: true, limit: "5mb" }));
-app.use(express.raw({ type: "*/*", limit: "5mb" }));
+app.use(express.text({ type: "*/*", limit: "5mb" }));
 
 // Rota de saúde
 app.get("/healthz", (req, res) => res.send("OK"));
@@ -31,6 +31,12 @@ app.all("*", async (req, res) => {
         delete headers.host;
         delete headers.connection;
 
+        // Converte o body para string/buffer para repassar
+        let body = req.body;
+        if (typeof body === 'object') {
+            body = JSON.stringify(body);
+        }
+
         const fetchOptions = {
             method: req.method,
             headers: headers,
@@ -38,8 +44,8 @@ app.all("*", async (req, res) => {
         };
 
         // Se houver corpo na requisição (POST/PUT), repassa
-        if (Buffer.isBuffer(req.body) && req.body.length > 0) {
-            fetchOptions.body = req.body;
+        if (body && body.length > 0) {
+            fetchOptions.body = body;
         }
 
         const upstreamResponse = await fetch(targetUrl, fetchOptions);
