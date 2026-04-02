@@ -7,7 +7,9 @@ const port = process.env.PORT || 3000;
 // O alvo para onde as fichas serão enviadas
 const TARGET_BASE_URL = "http://node103.ldc.srv.br:30404";
 
-// Middleware para capturar o corpo da requisição como Buffer (essencial para Proxy)
+// Middleware para parse de diferentes tipos de conteúdo
+app.use(express.json({ limit: "5mb" }));
+app.use(express.urlencoded({ extended: true, limit: "5mb" }));
 app.use(express.raw({ type: "*/*", limit: "5mb" }));
 
 // Rota de saúde
