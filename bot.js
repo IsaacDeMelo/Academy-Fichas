@@ -1,5 +1,4 @@
 const express = require("express");
-const fetch = require("node-fetch"); // Se estiver usando Node 18+, não precisa instalar, já é nativo
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -44,8 +43,13 @@ async function forwardRequest(req, res, targetPath) {
 
         res.status(upstreamResponse.status).send(responseData);
     } catch (error) {
-        console.error("Proxy Error:", error);
-        res.status(502).send("Erro ao conectar ao servidor de destino.");
+        console.error("Proxy Error:", {
+            message: error?.message,
+            name: error?.name,
+            cause: error?.cause,
+            stack: error?.stack
+        });
+        res.status(502).send(`Erro ao conectar ao servidor de destino: ${error?.message || "desconhecido"}`);
     }
 }
 
