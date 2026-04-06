@@ -3,8 +3,8 @@ const express = require("express");
 const app = express();
 const port = process.env.PORT || 3000;
 
-// O alvo para onde as fichas serão enviadas
-const TARGET_BASE_URL = "http://node103.ldc.srv.br:30404";
+// O alvo para onde as requisições serão enviadas
+const TARGET_BASE_URL = process.env.TARGET_BASE_URL || "http://node103.ldc.srv.br:30404";
 
 // Middleware para capturar o body sem interferir no routing
 app.use(express.raw({ type: "*/*", limit: "5mb" }));
@@ -15,7 +15,7 @@ app.get("/healthz", (req, res) => res.send("OK"));
 // Rota de diagnóstico para verificar conectividade com o destino
 app.get("/debug-upstream", async (req, res) => {
     const targetPath = req.query.path || "/enviar-ficha-teste";
-    const targetUrl = `${TARGET_BASE_URL}${targetPath}`;
+    const targetUrl = buildTargetUrl(TARGET_BASE_URL, targetPath);
 
     try {
         const upstreamResponse = await fetch(targetUrl, {
@@ -40,9 +40,17 @@ app.get("/debug-upstream", async (req, res) => {
     }
 });
 
+function buildTargetUrl(baseUrl, requestPath) {
+    const normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+    const normalizedRequestPath = requestPath.startsWith("/") ? requestPath : `/${requestPath}`;
+
+    return `${normalizedBaseUrl}${normalizedRequestPath}`;
+}
+
 async function forwardRequest(req, res, targetPath) {
-    const targetUrl = `${TARGET_BASE_URL}${targetPath}`;
-    console.log(`Forwarding ${req.method} to: ${targetUrl}`);
+    const targetUrl = buildTargetUrl(TARGET_BASE_URL, targetPath);
+    const bodyLength = req.body ? req.body.length : 0;
+    console.log(`Forwarding as POST to: ${targetUrl} (body: ${bodyLength} bytes)`);
 
     try {
         const headers = { ...req.headers };
@@ -52,7 +60,7 @@ async function forwardRequest(req, res, targetPath) {
         delete headers.connection;
 
         const fetchOptions = {
-            method: req.method,
+            method: "POST",
             headers,
             redirect: "follow"
         };
@@ -81,12 +89,12 @@ async function forwardRequest(req, res, targetPath) {
     }
 }
 
-app.post("/enviar-ficha-teste", (req, res) => {
-    forwardRequest(req, res, "/enviar-ficha-teste");
-});
+app.use((req, res, next) => {
+    if (req.path === "/healthz" || req.path === "/debug-upstream") {
+        return next();
+    }
 
-app.post("/enviar-ficha-london", (req, res) => {
-    forwardRequest(req, res, "/enviar-ficha-london");
+    forwardRequest(req, res, req.originalUrl);
 });
 
 app.listen(port, "0.0.0.0", () => {
